@@ -1,7 +1,9 @@
 set(CMAKE_CXX_STANDARD 11)
 
 
-add_executable(spider spider.cc spider.h)
+
+aux_source_directory(. SPIDER_SRC)
+add_executable(spider ${SPIDER_SRC})
 
 
 include(FetchContent)
