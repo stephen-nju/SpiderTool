@@ -4,7 +4,7 @@ class TaskPool {
 private:
     /* data */
 public:
-    TaskPool()=default
+    TaskPool()=default;
     ~TaskPool();
 };
 
