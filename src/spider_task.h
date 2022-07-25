@@ -1,7 +1,7 @@
 #ifndef SRC_SPIDER_H
 #define SRC_SPIDER_H
 #include <cstdio>
-#include <memery>
+#include <memory>
 #include <string>
 
 #include "cpr/cpr.h"
@@ -14,7 +14,7 @@ namespace spider {
 class SpiderTask {
 private:
     cpr::Url spider_url_;
-    std::string save_direcotry_;
+    std::string save_directory_;
     std::string video_name_;
     std::unique_ptr<Extractor> extractor_;
     Download* download_;

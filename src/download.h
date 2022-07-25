@@ -21,7 +21,7 @@ class VideoDownload : public Download {
 public:
     void start_download() override;
     void stop_download() override;
-}
+};
 
 }  // namespace spider
 #endif

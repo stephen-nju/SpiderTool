@@ -1,6 +1,11 @@
 #include "extractor.h"
-namespace spider {
 
-bool Extractor::check_url(std::string url) {}
+#include <regex>
+
+#include "utils.h"
+namespace spider {
+bool Extractor::parser_url(const std::string& url) {
+    return std::string("www.bilibili.com");
+}
 
 }  // namespace spider

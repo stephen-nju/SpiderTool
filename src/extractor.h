@@ -5,6 +5,7 @@
 #include <string>
 
 #include "cpr/cpr.h"
+#include "spdlog/spdlog.h"
 namespace spider {
 // 视频类型
 enum class VideoType {
@@ -33,10 +34,10 @@ private:
     std::unique_ptr<ExtractOutput> output;
 
 public:
-    bool check_url(std::string url);
+    bool parser_url(const std::string& url);
     std::unique_ptr<ExtractOutput> get_output();
-    Extractor();
-    ~Extractor();
+    Extractor() = default;
+    ~Extractor() = default;
 };
 }  // namespace spider
 #endif

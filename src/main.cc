@@ -4,7 +4,10 @@
 #include <string>
 
 #include "cpr/cpr.h"
+#include "utils.h"
 
 int main(int argc, char** argv) {
-    printf("start task..............");
+    const string s = string("  hello word ");
+    string d = spider::trim(s);
+    printf("%s", s.c_str());
 }
