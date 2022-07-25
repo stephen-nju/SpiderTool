@@ -1,26 +1,42 @@
 #ifndef SRC_EXTRACTOR_H
 #define SRC_EXTRACTOR_H
 #include <memory>
+#include <regex>
 #include <string>
+
+#include "cpr/cpr.h"
 namespace spider {
-    // 视频类型
-enum class ContentType { UGC = 1, PGC, PUGV, Live, Comic };
-struct Result {
-    ContentType type_;
-    int id_;
-    std::string title_;
-    Result(ContenType type,int id, const std::string& title) : type_(type),id_(id), title_(title) {}
-    virtual ~Result() = default;
+// 视频类型
+enum class VideoType {
+    Normal,
+    Series,
+    Live,
+};
+
+struct ExtractOutput {
+    cpr::Url url;
+    int id;
+    VideoType type;
+    std::string title;
+    ExtractOutput(VideoType type, cpr::Url url, int id, std::string title)
+        : type(type),
+          url(url),
+          id(id),
+          title(title){};
+
+    virtual ~ExtractOutput();
 };
 
 class Extractor {
 private:
-    std::unique_ptr<Result> result_;
+    void _not_supported_url(std::string url);
+    std::unique_ptr<ExtractOutput> output;
 
 public:
+    bool check_url(std::string url);
+    std::unique_ptr<ExtractOutput> get_output();
     Extractor();
     ~Extractor();
-    std::unique_ptr<Result> getResult();
 };
 }  // namespace spider
 #endif
