@@ -1,3 +1,9 @@
 [submodule "3rdparty/spdlog"]
 	path = 3rdparty/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "LibnlpTool"]
+	path = LibnlpTool
+	url = https://github.com/stephen-nju/LibnlpTool.git
+[submodule "3rdparty/LibnlpTool"]
+	path = 3rdparty/LibnlpTool
+	url = https://github.com/stephen-nju/LibnlpTool.git
