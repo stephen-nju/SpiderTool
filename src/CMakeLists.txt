@@ -1,4 +1,7 @@
-set(CMAKE_CXX_STANDARD 11)
+
+message(STATUS "====3rdparty include dir ===${3RDPARTY_INCLUDE_DIR}")
+
+
 
 
 
@@ -13,3 +16,4 @@ FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
 FetchContent_MakeAvailable(cpr)
 
 target_link_libraries(spider PRIVATE cpr::cpr)
+target_link_libraries(spider PUBLIC nlptool)

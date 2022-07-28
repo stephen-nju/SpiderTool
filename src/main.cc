@@ -4,10 +4,10 @@
 #include <string>
 
 #include "cpr/cpr.h"
-#include "utils.h"
+#include "libnlptool/utils.h"
 
 int main(int argc, char** argv) {
-    const string s = string("  hello word ");
-    string d = spider::trim(s);
-    printf("%s", s.c_str());
+    std::string url = "  www.bilibili.com ";
+    absl::string_view o = nlptools::lstrip(absl::string_view(url));
+    printf("%s\n", o.data());
 }

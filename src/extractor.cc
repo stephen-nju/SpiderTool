@@ -5,7 +5,7 @@
 #include "utils.h"
 namespace spider {
 bool Extractor::parser_url(const std::string& url) {
-    return std::string("www.bilibili.com");
+    return true;
 }
 
 }  // namespace spider

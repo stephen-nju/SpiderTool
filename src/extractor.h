@@ -5,7 +5,7 @@
 #include <string>
 
 #include "cpr/cpr.h"
-#include "spdlog/spdlog.h"
+
 namespace spider {
 // 视频类型
 enum class VideoType {
