@@ -26,17 +26,19 @@ struct ExtractOutput {
           url(url),
           id(id),
           title(title){};
-    virtual ~ExtractOutput();
+    virtual ~ExtractOutput()=default;
 };
 
 class Extractor {
 private:
+    cpr::Url url;
     bool _not_supported_url(absl::string_view url);
-
 public:
     void parser_url(const absl::string_view& url);
-    void parse_response();
-    std::unique_ptr<ExtractOutput> get_output();
+    void parse_reponse();
+    std::unique_ptr<ExtractOutput> get_response();
+    std::unique_ptr<ExtractOutput> get_extract_output();
+
     explicit Extractor() ;
    virtual  ~Extractor();
 };
