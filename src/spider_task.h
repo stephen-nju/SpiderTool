@@ -21,7 +21,7 @@ private:
     std::string get_title();
 
 public:
-    explicit SpiderTask(cpr::Url url, std::string save_diretory);
+    explicit SpiderTask(cpr::Url url, const std::string& save_diretory);
     ~SpiderTask();
     bool run();
 };

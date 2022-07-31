@@ -4,10 +4,16 @@
 #include <string>
 
 #include "cpr/cpr.h"
-#include "libnlptool/utils.h"
-
+#include"spider_task.h"
+#include <memory>
 int main(int argc, char** argv) {
-    std::string url = "  www.bilibili.com ";
-    absl::string_view o = nlptools::lstrip(absl::string_view(url));
-    printf("%s\n", o.data());
+    
+printf("start spider......");
+cpr::Url url=cpr::Url("https://www.bilibili.com/video/BV17Z4y1F7VN?from=search&seid=2171182556647259628&spm_id_from=333.337.0.0");
+const std::string dir=std::string("/Users/zhubin/Documents");
+
+spider::SpiderTask task(url,dir);
+
+
+
 }

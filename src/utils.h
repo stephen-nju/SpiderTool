@@ -1,13 +1,14 @@
 #ifndef SRC_UTILS_H
 #define SRC_UTILS_H
-#include <algorithm>
-#include <cctype>
-#include <cstring>
-#include <string>
-
-using std::string;
-
+#include "absl/strings/string_view.h"
 namespace spider {
-string trim(const string& s);
+
+absl::string_view rstrip(absl::string_view& s);
+
+absl::string_view lstrip(absl::string_view& s);
+
+absl::string_view strip(absl::string_view& s);
+
+
 }  // namespace spider
 #endif

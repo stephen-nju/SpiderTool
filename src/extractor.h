@@ -5,9 +5,11 @@
 #include <string>
 
 #include "cpr/cpr.h"
+#include "absl/strings/string_view.h"
 
 namespace spider {
 // 视频类型
+
 enum class VideoType {
     Normal,
     Series,
@@ -18,26 +20,25 @@ struct ExtractOutput {
     cpr::Url url;
     int id;
     VideoType type;
-    std::string title;
-    ExtractOutput(VideoType type, cpr::Url url, int id, std::string title)
+    absl::string_view title;
+    ExtractOutput(VideoType type, cpr::Url url, int id, absl::string_view title)
         : type(type),
           url(url),
           id(id),
           title(title){};
-
     virtual ~ExtractOutput();
 };
 
 class Extractor {
 private:
-    void _not_supported_url(std::string url);
-    std::unique_ptr<ExtractOutput> output;
+    bool _not_supported_url(absl::string_view url);
 
 public:
-    bool parser_url(const std::string& url);
+    void parser_url(const absl::string_view& url);
+    void parse_response();
     std::unique_ptr<ExtractOutput> get_output();
-    Extractor() = default;
-    ~Extractor() = default;
+    explicit Extractor() ;
+   virtual  ~Extractor();
 };
 }  // namespace spider
 #endif
