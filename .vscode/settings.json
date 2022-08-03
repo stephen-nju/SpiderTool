@@ -107,6 +107,23 @@
         "unordered_set": "cpp",
         "valarray": "cpp",
         "variant": "cpp",
-        "__functional_base": "cpp"
+        "__functional_base": "cpp",
+        "execution": "cpp",
+        "filesystem": "cpp",
+        "ranges": "cpp",
+        "barrier": "cpp",
+        "codecvt": "cpp",
+        "coroutine": "cpp",
+        "csetjmp": "cpp",
+        "latch": "cpp",
+        "memory_resource": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "shared_mutex": "cpp",
+        "source_location": "cpp",
+        "span": "cpp",
+        "strstream": "cpp",
+        "syncstream": "cpp",
+        "*.inc": "cpp"
     }
 }

@@ -2,36 +2,48 @@
 
 #include <regex>
 
+#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "utils.h"
 namespace spider {
 
-Extractor::Extractor(){};
+Extractor::Extractor() {
+    this->output_ = absl::make_unique<ExtractOutput>();
+    this->url_ = absl::make_unique<absl::string_view>(nullptr);
+};
 Extractor::~Extractor(){};
-void Extractor::parser_url(const absl::string_view& url) {
+
+bool Extractor::init(absl::string_view s) {
+    if (this->parser_url(s)) {
+        if (this->parse_reponse()) {
+        };
+    };
+    return false;
+}
+bool Extractor::parser_url(absl::string_view url) {
+    absl::string_view url_trim = spider::strip(url);
     // 解析url 判断网页视频类型
-    return;
+    this->url_ = absl::make_unique<absl::string_view>(url_trim.data());
+
+    if (std::regex_match(url_trim.data(), std::regex("(?:www\.|m\.)?bilibili\.com"))) {
+        if (std::regex_match(url_trim.data(), std::regex("(?:BV|bv)([a-zA-Z0-9]+)?/"))) {
+            // UGC BV id
+
+            return true;
+        }
+    }
+    return true;
 };
 
-std::unique_ptr<ExtractOutput> Extractor::get_response() {
-    cpr::Response r = cpr::Get(this->url,
-                               cpr::Authentication{"user", "pass", cpr::AuthMode::BASIC},
-                               cpr::Parameters{{"anon", "true"}, {"key", "value"}});
+bool Extractor::parse_reponse() {
+    // 解析网页html 获取标题等
+    printf("%s\n", url_->data());
+    cpr::Response r = cpr::Get(cpr::Url(url_->data()));
     printf("%s", r.text.c_str());
-    //获取网页元素
-    absl::string_view title = "data";
-    // 解析元素
-    std::unique_ptr<ExtractOutput> out =
-        std::unique_ptr<ExtractOutput>(new ExtractOutput(VideoType::Normal, url, 10, title));
-    return out;
+    return true;
 };
-
-void Extractor::parse_reponse(){};
 
 std::unique_ptr<ExtractOutput> Extractor::get_extract_output() {
-    absl::string_view title = "data";
-    std::unique_ptr<ExtractOutput> out =
-        std::unique_ptr<ExtractOutput>(new ExtractOutput(VideoType::Normal, url, 10, title));
-    return out;
+    return std::move(this->output_);
 };
 }  // namespace spider
