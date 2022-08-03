@@ -39,7 +39,7 @@ ssize_t utf8proc_iterate_reversed(const uint8_t* str, ssize_t start, int32_t* ds
 absl::string_view lstrip(absl::string_view s) {
     const char* text_data = s.data();
     size_t pos = 0;
-    int codepoint;
+    int codepoint = 0;
     char dst[4];
     while (pos < std::strlen(text_data)) {
         int len = utf8proc_iterate((const utf8proc_uint8_t*)text_data + pos, -1, &codepoint);

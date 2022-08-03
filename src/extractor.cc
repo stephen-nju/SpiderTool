@@ -8,8 +8,7 @@
 namespace spider {
 
 Extractor::Extractor() {
-    this->output_ = absl::make_unique<ExtractOutput>();
-    this->url_ = absl::make_unique<absl::string_view>(nullptr);
+    output_ = absl::make_unique<ExtractOutput>();
 };
 Extractor::~Extractor(){};
 
@@ -20,10 +19,11 @@ bool Extractor::init(absl::string_view s) {
     };
     return false;
 }
+
 bool Extractor::parser_url(absl::string_view url) {
     absl::string_view url_trim = spider::strip(url);
     // 解析url 判断网页视频类型
-    this->url_ = absl::make_unique<absl::string_view>(url_trim.data());
+    url_ = absl::make_unique<absl::string_view>(url_trim.data());
 
     if (std::regex_match(url_trim.data(), std::regex("(?:www\.|m\.)?bilibili\.com"))) {
         if (std::regex_match(url_trim.data(), std::regex("(?:BV|bv)([a-zA-Z0-9]+)?/"))) {
