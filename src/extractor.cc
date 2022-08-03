@@ -1,9 +1,12 @@
 #include "extractor.h"
 
+#include <iostream>
 #include <regex>
 
 #include "absl/memory/memory.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/strings/strip.h"
 #include "utils.h"
 namespace spider {
 
@@ -23,13 +26,14 @@ bool Extractor::init(absl::string_view s) {
 bool Extractor::parser_url(absl::string_view url) {
     absl::string_view url_trim = spider::strip(url);
     // 解析url 判断网页视频类型
-    url_ = absl::make_unique<absl::string_view>(url_trim.data());
-
-    if (std::regex_match(url_trim.data(), std::regex("(?:www\.|m\.)?bilibili\.com"))) {
-        if (std::regex_match(url_trim.data(), std::regex("(?:BV|bv)([a-zA-Z0-9]+)?/"))) {
-            // UGC BV id
-
-            return true;
+    // 删除包含的http:// https:// 前缀
+    absl::string_view url_s = absl::StripPrefix(url_trim, "https://");
+    absl::string_view url_s1 = absl::StripPrefix(url_s, "http://");
+    url_ = absl::make_unique<absl::string_view>(url_s1.data());
+    if (std::regex_match(url_s1.data(), std::regex(u8"^(?:www\.|m\.)?bilibili\.com.*$"))) {
+        std::cmatch match;
+        if (std::regex_search(url_s1.data(), match, std::regex(u8"/video/BV|bv([a-zA-Z0-9]+)?"))) {
+            std::cout << match[1];
         }
     }
     return true;
@@ -37,7 +41,6 @@ bool Extractor::parser_url(absl::string_view url) {
 
 bool Extractor::parse_reponse() {
     // 解析网页html 获取标题等
-    printf("%s\n", url_->data());
     cpr::Response r = cpr::Get(cpr::Url(url_->data()));
     printf("%s", r.text.c_str());
     return true;

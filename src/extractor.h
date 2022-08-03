@@ -17,7 +17,7 @@ enum class VideoType {
 };
 
 struct ExtractOutput {
-    cpr::Url url;
+    std::unique_ptr<absl::string_view> query;
     int id;
     VideoType type;
     std::string title;
