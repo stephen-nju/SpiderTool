@@ -17,17 +17,15 @@ enum class VideoType {
 };
 
 struct ExtractOutput {
-    std::unique_ptr<absl::string_view> query;
+    std::unique_ptr<std::string> query;
     int id;
     VideoType type;
-    std::string title;
-
+    std::unique_ptr<std::string> title;
     // ExtractOutput(VideoType type, cpr::Url url, int id, absl::string_view title)
     //     : type(type),
     //       url(url),
     //       id(id),
     //       title(title){};
-
     ExtractOutput() = default;
     virtual ~ExtractOutput() = default;
 };
