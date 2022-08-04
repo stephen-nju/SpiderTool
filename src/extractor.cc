@@ -57,9 +57,10 @@ bool Extractor::parse_reponse(absl::string_view api) {
     cpr::Response r = cpr::Get(cpr::Url(api.data()));
     rapidjson::Document document;
     document.Parse(r.text.c_str());
-    printf("%s", document["title"].GetString());
-
-    return true;
+    if (document.HasMember("data")) {
+        // rapidjson::Value data = document["data"];
+    }
+    return false;
 };
 
 std::unique_ptr<ExtractOutput> Extractor::get_extract_output() {
