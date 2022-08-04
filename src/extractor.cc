@@ -8,7 +8,10 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
+#include "rapidjson/document.h"
+#include "rapidjson/rapidjson.h"
 #include "utils.h"
+
 namespace spider {
 
 Extractor::Extractor() {
@@ -21,8 +24,6 @@ Extractor::~Extractor(){};
 
 bool Extractor::init(absl::string_view s) {
     if (this->parser_url(s)) {
-        if (this->parse_reponse()) {
-        };
     };
     return false;
 }
@@ -38,22 +39,26 @@ bool Extractor::parser_url(absl::string_view url) {
     if (std::regex_match(url_->data(), std::regex("^(?:www\\.|m\\.)?bilibili\\.com.*$"))) {
         std::cmatch match;
         if (std::regex_match(url_->data(), match, std::regex("(?:.*BV|bv)([a-zA-Z0-9]+).*"))) {
-            std::string concat =
-                absl::StrCat("https://api.bilibili.com/x/web-interface/view?bvid=", match.str(1).c_str());
-            // 查看内存地址
-            std::unique_ptr<std::string> query = absl::make_unique<std::string>(concat);
+            std::string api = absl::StrCat("https://api.bilibili.com/x/web-interface/view?bvid=", match.str(1).c_str());
+            std::unique_ptr<std::string> query = absl::make_unique<std::string>(api);
             output_->query = std::move(query);
+            // 查看内存地址
+            if (parse_reponse(api)) {
+                return true;
+            }
             return true;
         }
     }
     return false;
 };
 
-bool Extractor::parse_reponse() {
+bool Extractor::parse_reponse(absl::string_view api) {
     // 解析网页html 获取标题等
-    printf("%s\n", url_->data());
-    cpr::Response r = cpr::Get(cpr::Url(url_->data()));
-    printf("%s", r.text.c_str());
+    cpr::Response r = cpr::Get(cpr::Url(api.data()));
+    rapidjson::Document document;
+    document.Parse(r.text.c_str());
+    printf("%s", document["title"].GetString());
+
     return true;
 };
 

@@ -36,7 +36,7 @@ private:
     std::unique_ptr<ExtractOutput> output_;
     cpr::Response* response_ = nullptr;
     bool parser_url(absl::string_view url);
-    bool parse_reponse();
+    bool parse_reponse(absl::string_view api);
 
 public:
     std::unique_ptr<ExtractOutput> get_extract_output();

@@ -1,8 +1,4 @@
 
-message(STATUS "====3rdparty include dir ===${3RDPARTY_INCLUDE_DIR}")
-
-
-
 
 
 aux_source_directory(. SPIDER_SRC)
