@@ -18,7 +18,7 @@ private:
     absl::string_view save_directory_;
     absl::string_view video_name_;
     std::unique_ptr<Extractor> extractor_;
-    Download* download_;
+    DownloadTask* download_;
     absl::string_view get_title();
 
 public:

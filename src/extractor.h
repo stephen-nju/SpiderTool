@@ -11,35 +11,38 @@ namespace spider {
 // 视频类型
 
 enum class VideoType {
-    Normal,
+    Ugc,
     Series,
     Live,
 };
 
-struct ExtractOutput {
-    std::unique_ptr<std::string> query;
-    int id;
+struct VideoInfo {
     VideoType type;
     std::unique_ptr<std::string> title;
-    // ExtractOutput(VideoType type, cpr::Url url, int id, absl::string_view title)
-    //     : type(type),
-    //       url(url),
-    //       id(id),
-    //       title(title){};
-    ExtractOutput() = default;
-    virtual ~ExtractOutput() = default;
+    int bvid;
+    int aid;
+    int cid;
+    int mid;
+    VideoInfo() = default;
+    virtual ~VideoInfo() = default;
+};
+
+struct VideoContent {
+    int duration;
+    std::unique_ptr<std::string> part;
 };
 
 class Extractor {
 private:
-    std::unique_ptr<absl::string_view> url_;
-    std::unique_ptr<ExtractOutput> output_;
-    cpr::Response* response_ = nullptr;
-    bool parser_url(absl::string_view url);
-    bool parse_reponse(absl::string_view api);
+    std::unique_ptr<VideoInfo> video_info_;
+    std::unique_ptr<cpr::Response> response_;
+    bool parse_url(absl::string_view url);
+    bool parse_ugc_response();
+    bool parse_pgc_response();
+    bool parse_pugv_response();
 
 public:
-    std::unique_ptr<ExtractOutput> get_extract_output();
+    std::unique_ptr<VideoInfo> get_video_info();
     bool init(absl::string_view s);
     explicit Extractor();
     virtual ~Extractor();
