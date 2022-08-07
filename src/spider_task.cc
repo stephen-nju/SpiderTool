@@ -17,7 +17,7 @@ SpiderTask::~SpiderTask(){
 
 void SpiderTask::run() {
     if (!extractor_->init(spider_url_)) {
-        printf(u8"输入格式不支持");
+        printf(u8"输入格式不支持\n");
     };
 };
 }  // namespace spider

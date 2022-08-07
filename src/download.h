@@ -8,12 +8,11 @@
 #include "cpr/cpr.h"
 namespace spider {
 
-// 数据下载模块
 class DownloadTask {
 public:
-    static DownloadTask* from_videoinfo();
-    virtual void start_download() = 0;
-    virtual std::string get_title();
+    static std::unique_ptr<DownloadTask> from_videoinfo();
+    virtual std::string get_title()=0;
+    virtual void start_download()=0;
     virtual ~DownloadTask();
 
 protected:
@@ -32,11 +31,13 @@ class UgcVideoDownloadTask : public DownloadTask {
 protected:
     int totol_video_size;
     std::unique_ptr<std::FILE> file_;
+    UgcVideoDownloadTask();
 
 public:
     void parse_url();
     std::string get_title() override;
     void start_download() override;
+    ~UgcVideoDownloadTask();
 };
 
 }  // namespace spider

@@ -1,6 +1,7 @@
 #include "extractor.h"
 
 #include <iostream>
+#include <list>
 #include <regex>
 
 #include "absl/memory/memory.h"
@@ -22,15 +23,12 @@ constexpr int AllowWaitFree = 8;  // manga
 
 namespace spider {
 
-Extractor::Extractor() {
-    // 初始化输出
-    video_info_ = absl::make_unique<VideoInfo>();
-    video_info_->title = absl::make_unique<std::string>();
-};
+Extractor::Extractor(){};
 Extractor::~Extractor(){};
 
 bool Extractor::init(absl::string_view s) {
     if (this->parse_url(s)) {
+        return true;
     };
     return false;
 }
@@ -48,7 +46,7 @@ bool Extractor::parse_url(absl::string_view url) {
             // 注意查看查看内存地址
             std::string api = absl::StrCat("https://api.bilibili.com/x/web-interface/view?bvid=", match.str(1).c_str());
             response_ = absl::make_unique<cpr::Response>(cpr::Get(cpr::Url(api.data())));
-            printf_s("%s\n", api.c_str());
+            printf("%s\n", api.c_str());
             if (parse_ugc_response()) {
                 return true;
             }
@@ -62,12 +60,43 @@ bool Extractor::parse_ugc_response() {
 
     // 构建UGC video info
     rapidjson::Document document;
+    video_info_ = absl::make_unique<UgcVideoInfo>();
+    video_info_->type = VideoType::Ugc;
     document.Parse(response_->text.c_str());
     if (document.HasMember("data")) {
         rapidjson::Value& data = document["data"];
         if (data.HasMember("title")) {
             video_info_->title = std::move(absl::make_unique<std::string>(data["title"].GetString()));
         }
+        if (data.HasMember("aid")) {
+            video_info_->aid = data["aid"].GetInt();
+        }
+        if (data.HasMember("cid")) {
+            video_info_->cid = data["cid"].GetInt();
+        }
+        if (data.HasMember("mid")) {
+            video_info_->mid = data["mid"].GetInt();
+        }
+        if (data.HasMember("pages")) {
+            std::list<std::unique_ptr<VideoContent>> items;
+            rapidjson::Value& array = data["pages"].GetArray();
+            for (rapidjson::SizeType i = 0; i < array.Size(); i++) {
+                std::unique_ptr<VideoContent> content = absl::make_unique<VideoContent>();
+
+                rapidjson::Value& value = array[i];
+                if (value.HasMember("duration")) {
+                    int duration = value["duration"].GetInt();
+                    content->duration = duration;
+                }
+                if (value.HasMember("part")) {
+                    content->part = absl::make_unique<std::string>(value["part"].GetString());
+                }
+                items.emplace_back(std::move(content));
+            }
+            return true;
+        }
+
+        return true;
     }
     return false;
 };
