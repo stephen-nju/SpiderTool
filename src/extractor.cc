@@ -28,7 +28,7 @@ Extractor::~Extractor(){};
 
 bool Extractor::init(absl::string_view s) {
     if (this->parse_url(s)) {
-        return true;
+            return true;
     };
     return false;
 }

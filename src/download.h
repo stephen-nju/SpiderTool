@@ -31,13 +31,15 @@ protected:
 class UgcVideoDownloadTask : public DownloadTask {
 protected:
     int total_video_size;
-    bool std::unique_ptr<std::FILE> file_;
+    std::unique_ptr<std::FILE> file_;
+    std::unique_ptr<VideoInfo> video_info_;
 
 public:
-    bool parse_url();
+    bool parse_play_info();
     std::string get_title() override;
     void start_download(absl::string_view save_directory) override;
-    UgcVideoDownloadTask();
+    UgcVideoDownloadTask(VideoInfo* video_info);
+    UgcVideoDownloadTask()=delete;
 
     virtual ~UgcVideoDownloadTask();
 };

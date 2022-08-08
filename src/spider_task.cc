@@ -8,8 +8,6 @@ SpiderTask::SpiderTask(absl::string_view url, const absl::string_view& save_dire
     : spider_url_(url),
       save_directory_(save_directory) {
     extractor_ = absl::make_unique<Extractor>();
-    std::unique_ptr<VideoInfo> video_info = extractor_->get_video_info();
-    download_ = DownloadTask::from_videoinfo(video_info.get());
 };
 // 初始化extractor
 
@@ -21,6 +19,8 @@ SpiderTask::~SpiderTask(){
 
 void SpiderTask::run() {
     if (extractor_->init(spider_url_)) {
+        std::unique_ptr<VideoInfo> video_info = extractor_->get_video_info();
+        download_ = DownloadTask::from_videoinfo(video_info.get());
         download_->start_download(save_directory_);
     };
 };
