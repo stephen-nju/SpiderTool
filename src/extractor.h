@@ -31,8 +31,7 @@ struct VideoContent {
     int duration;
     std::unique_ptr<std::string> part;
 };
-struct UgcVideoInfo: public VideoInfo{
-
+struct UgcVideoInfo : public VideoInfo {
     std::list<std::unique_ptr<VideoContent>> items;
 };
 class Extractor {

@@ -5,39 +5,41 @@
 #include <memory>
 #include <string>
 
+#include "absl/strings/string_view.h"
 #include "cpr/cpr.h"
+#include "extractor.h"
 namespace spider {
+
+struct DownloadInfo {
+    /* data */
+};
 
 class DownloadTask {
 public:
-    static std::unique_ptr<DownloadTask> from_videoinfo();
-    virtual std::string get_title()=0;
-    virtual void start_download()=0;
+    static std::unique_ptr<DownloadTask> from_videoinfo(VideoInfo* video_info);
+    virtual std::string get_title() = 0;
+    virtual void start_download(absl::string_view save_directory) = 0;
+    DownloadTask();
     virtual ~DownloadTask();
 
 protected:
     // 文件路径
     std::unique_ptr<std::string> path_;
     std::unique_ptr<cpr::Response> response_;
-    DownloadTask();
-
-public:
-    std::string get_path() {
-        return *path_;
-    };
 };
 
 class UgcVideoDownloadTask : public DownloadTask {
 protected:
-    int totol_video_size;
-    std::unique_ptr<std::FILE> file_;
-    UgcVideoDownloadTask();
+    int total_video_size;
+    bool std::unique_ptr<std::FILE> file_;
 
 public:
-    void parse_url();
+    bool parse_url();
     std::string get_title() override;
-    void start_download() override;
-    ~UgcVideoDownloadTask();
+    void start_download(absl::string_view save_directory) override;
+    UgcVideoDownloadTask();
+
+    virtual ~UgcVideoDownloadTask();
 };
 
 }  // namespace spider

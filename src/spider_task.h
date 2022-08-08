@@ -16,10 +16,8 @@ class SpiderTask {
 private:
     absl::string_view spider_url_;
     absl::string_view save_directory_;
-    absl::string_view video_name_;
     std::unique_ptr<Extractor> extractor_;
-    DownloadTask* download_;
-    absl::string_view get_title();
+    std::unique_ptr<DownloadTask> download_;
 
 public:
     explicit SpiderTask(absl::string_view url, const absl::string_view& save_diretory);
