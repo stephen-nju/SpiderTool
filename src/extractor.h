@@ -23,8 +23,8 @@ struct VideoInfo {
     int aid;
     int cid;
     int mid;
-    VideoInfo() = default;
-    virtual ~VideoInfo() = default;
+    VideoInfo();
+    virtual ~VideoInfo();
 };
 
 struct VideoContent {
@@ -33,6 +33,8 @@ struct VideoContent {
 };
 struct UgcVideoInfo : public VideoInfo {
     std::list<std::unique_ptr<VideoContent>> items;
+    UgcVideoInfo();
+    ~UgcVideoInfo();
 };
 class Extractor {
 private:

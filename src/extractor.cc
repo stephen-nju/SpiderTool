@@ -24,6 +24,11 @@ constexpr int AllowWaitFree = 8;  // manga
 
 namespace spider {
 
+VideoInfo::VideoInfo(){};
+VideoInfo::~VideoInfo(){};
+UgcVideoInfo::UgcVideoInfo(){};
+UgcVideoInfo::~UgcVideoInfo(){};
+
 Extractor::Extractor(){};
 Extractor::~Extractor(){};
 
