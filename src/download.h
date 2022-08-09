@@ -2,6 +2,7 @@
 #define SRC_DOWNLOAD_H
 #include <cstdio>
 #include <cstring>
+#include <list>
 #include <memory>
 #include <string>
 
@@ -10,8 +11,15 @@
 #include "extractor.h"
 namespace spider {
 
+struct Section {
+    int order;
+    std::string section_url;
+};
 struct DownloadInfo {
-    /* data */
+    std::string video_name;
+    std::list<std::unique_ptr<Section>> durl;
+    DownloadInfo();
+    ~DownloadInfo();
 };
 
 class DownloadTask {
@@ -24,6 +32,7 @@ public:
 
 protected:
     // 文件路径
+    std::unique_ptr<DownloadInfo> download_info_;
     std::unique_ptr<std::string> path_;
     std::unique_ptr<cpr::Response> response_;
 };
@@ -39,7 +48,7 @@ public:
     std::string get_title() override;
     void start_download(absl::string_view save_directory) override;
     UgcVideoDownloadTask(VideoInfo* video_info);
-    UgcVideoDownloadTask()=delete;
+    UgcVideoDownloadTask() = delete;
 
     virtual ~UgcVideoDownloadTask();
 };

@@ -11,6 +11,7 @@
 #include "absl/strings/strip.h"
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson.h"
+#include "spdlog/spdlog.h"
 #include "utils.h"
 
 namespace ContentItemFlag {
@@ -28,7 +29,7 @@ Extractor::~Extractor(){};
 
 bool Extractor::init(absl::string_view s) {
     if (this->parse_url(s)) {
-            return true;
+        return true;
     };
     return false;
 }
@@ -39,7 +40,6 @@ bool Extractor::parse_url(absl::string_view url) {
     absl::string_view url_s = absl::StripPrefix(url, "https://");
     absl::string_view url_s1 = absl::StripPrefix(url_s, "http://");
     absl::string_view url_ = spider::strip(url_s1);
-
     if (std::regex_match(url_.data(), std::regex("^(?:www\\.|m\\.)?bilibili\\.com.*$"))) {
         std::cmatch match;
         if (std::regex_match(url_.data(), match, std::regex("(?:.*BV|bv)([a-zA-Z0-9]+).*"))) {
@@ -63,19 +63,32 @@ bool Extractor::parse_ugc_response() {
     video_info_ = absl::make_unique<UgcVideoInfo>();
     video_info_->type = VideoType::Ugc;
     document.Parse(response_->text.c_str());
+    printf("%s\n", response_->text.c_str());
     if (document.HasMember("data")) {
         rapidjson::Value& data = document["data"];
-        if (data.HasMember("title")) {
-            video_info_->title = std::move(absl::make_unique<std::string>(data["title"].GetString()));
+        if (!data.HasMember("title")) {
+            return false;
         }
-        if (data.HasMember("aid")) {
-            video_info_->aid = data["aid"].GetInt();
+        if (!data.HasMember("aid")) {
+            return false;
         }
-        if (data.HasMember("cid")) {
-            video_info_->cid = data["cid"].GetInt();
+        if (!data.HasMember("cid")) {
+            return false;
         }
-        if (data.HasMember("mid")) {
-            video_info_->mid = data["mid"].GetInt();
+        video_info_->title = std::move(absl::make_unique<std::string>(data["title"].GetString()));
+        video_info_->aid = data["aid"].GetInt();
+        video_info_->cid = data["cid"].GetInt();
+
+        // 获取owner 的mid
+        if (data.HasMember("owner")) {
+            rapidjson::Value& owner = data["owner"];
+            if (!owner.HasMember("mid")) {
+                spdlog::error("response doesnot have mid");
+                return false;
+            }
+            video_info_->mid = owner["mid"].GetInt();
+        } else {
+            return false;
         }
         if (data.HasMember("pages")) {
             std::list<std::unique_ptr<VideoContent>> items;
@@ -84,13 +97,15 @@ bool Extractor::parse_ugc_response() {
                 std::unique_ptr<VideoContent> content = absl::make_unique<VideoContent>();
 
                 rapidjson::Value& value = array[i];
-                if (value.HasMember("duration")) {
-                    int duration = value["duration"].GetInt();
-                    content->duration = duration;
+                if (!value.HasMember("duration")) {
+                    return false;
                 }
-                if (value.HasMember("part")) {
-                    content->part = absl::make_unique<std::string>(value["part"].GetString());
+                if (!value.HasMember("part")) {
+                    return false;
                 }
+                int duration = value["duration"].GetInt();
+                content->duration = duration;
+                content->part = absl::make_unique<std::string>(value["part"].GetString());
                 items.emplace_back(std::move(content));
             }
             return true;

@@ -11,5 +11,5 @@ FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
 # The commit hash for 1.9.0. Replace with the latest from: https://github.com/libcpr/cpr/releases
 FetchContent_MakeAvailable(cpr)
 
-target_link_libraries(spider PRIVATE cpr::cpr)
+target_link_libraries(spider PRIVATE cpr::cpr spdlog::spdlog)
 target_link_libraries(spider PRIVATE absl::strings utf8proc)
