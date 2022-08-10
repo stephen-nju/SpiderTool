@@ -17,18 +17,21 @@ DownloadInfo::DownloadInfo(){};
 DownloadInfo::~DownloadInfo(){};
 
 DownloadTask::DownloadTask(){};
-DownloadTask::~DownloadTask(){};
+DownloadTask::~DownloadTask() {
+    spdlog::info("runing DownloadTask Deconstruction");
+};
 
-UgcVideoDownloadTask::UgcVideoDownloadTask(VideoInfo* video_info) : DownloadTask(), video_info_(video_info) {
+UgcVideoDownloadTask::UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info) : DownloadTask() {
+    video_info_ = std::move(video_info);
     download_info_ = std::make_unique<DownloadInfo>();
     // download_info_->durl=std::list<std::unique_ptr<Section>> list;
 };
 
-std::unique_ptr<DownloadTask> DownloadTask::from_videoinfo(VideoInfo* video_info) {
+std::unique_ptr<DownloadTask> DownloadTask::from_videoinfo(std::unique_ptr<VideoInfo> video_info) {
     VideoType type = video_info->type;
     switch (type) {
     case VideoType::Ugc:
-        return absl::make_unique<UgcVideoDownloadTask>(video_info);
+        return absl::make_unique<UgcVideoDownloadTask>(std::move(video_info));
     }
     return nullptr;
 }

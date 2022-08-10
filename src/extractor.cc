@@ -1,10 +1,9 @@
 #include "extractor.h"
 
-#include <iostream>
 #include <list>
+#include <memory>
 #include <regex>
 
-#include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -25,12 +24,20 @@ constexpr int AllowWaitFree = 8;  // manga
 namespace spider {
 
 VideoInfo::VideoInfo(){};
-VideoInfo::~VideoInfo(){};
-UgcVideoInfo::UgcVideoInfo(){};
-UgcVideoInfo::~UgcVideoInfo(){};
+
+VideoInfo::~VideoInfo() {
+    spdlog::info("runing VideoInfo Deconstruction");
+};
+UgcVideoInfo::UgcVideoInfo() : VideoInfo(){};
+
+UgcVideoInfo::~UgcVideoInfo() {
+    spdlog::info("runing UgcVideoInfo Deconstruction");
+};
 
 Extractor::Extractor(){};
-Extractor::~Extractor(){};
+Extractor::~Extractor() {
+    spdlog::info("runing Extractor Deconstruction");
+};
 
 bool Extractor::init(absl::string_view s) {
     if (this->parse_url(s)) {
@@ -50,7 +57,7 @@ bool Extractor::parse_url(absl::string_view url) {
         if (std::regex_match(url_.data(), match, std::regex("(?:.*BV|bv)([a-zA-Z0-9]+).*"))) {
             // 注意查看查看内存地址
             std::string api = absl::StrCat("https://api.bilibili.com/x/web-interface/view?bvid=", match.str(1).c_str());
-            response_ = absl::make_unique<cpr::Response>(cpr::Get(cpr::Url(api.data())));
+            response_ = std::make_unique<cpr::Response>(cpr::Get(cpr::Url(api.data())));
             printf("%s\n", api.c_str());
             if (parse_ugc_response()) {
                 return true;
@@ -61,14 +68,14 @@ bool Extractor::parse_url(absl::string_view url) {
 };
 
 bool Extractor::parse_ugc_response() {
-    // 解析网页html 获取标题等
+    // 解析网页html 获取标题等std
 
     // 构建UGC video info
     rapidjson::Document document;
-    video_info_ = absl::make_unique<UgcVideoInfo>();
-    video_info_->type = VideoType::Ugc;
+    auto ugc_video_info = std::make_unique<UgcVideoInfo>();
+    ugc_video_info->type = VideoType::Ugc;
     document.Parse(response_->text.c_str());
-    printf("%s\n", response_->text.c_str());
+    // printf("%s\n", response_->text.c_str());
     if (document.HasMember("data")) {
         rapidjson::Value& data = document["data"];
         if (!data.HasMember("title")) {
@@ -80,9 +87,9 @@ bool Extractor::parse_ugc_response() {
         if (!data.HasMember("cid")) {
             return false;
         }
-        video_info_->title = std::move(absl::make_unique<std::string>(data["title"].GetString()));
-        video_info_->aid = data["aid"].GetInt();
-        video_info_->cid = data["cid"].GetInt();
+        ugc_video_info->title = std::make_unique<std::string>(data["title"].GetString());
+        ugc_video_info->aid = data["aid"].GetInt();
+        ugc_video_info->cid = data["cid"].GetInt();
 
         // 获取owner 的mid
         if (data.HasMember("owner")) {
@@ -91,15 +98,14 @@ bool Extractor::parse_ugc_response() {
                 spdlog::error("response doesnot have mid");
                 return false;
             }
-            video_info_->mid = owner["mid"].GetInt();
+            ugc_video_info->mid = owner["mid"].GetInt();
         } else {
             return false;
         }
         if (data.HasMember("pages")) {
-            std::list<std::unique_ptr<VideoContent>> items;
             rapidjson::Value& array = data["pages"].GetArray();
             for (rapidjson::SizeType i = 0; i < array.Size(); i++) {
-                std::unique_ptr<VideoContent> content = absl::make_unique<VideoContent>();
+                std::unique_ptr<VideoContent> content = std::make_unique<VideoContent>();
 
                 rapidjson::Value& value = array[i];
                 if (!value.HasMember("duration")) {
@@ -110,9 +116,10 @@ bool Extractor::parse_ugc_response() {
                 }
                 int duration = value["duration"].GetInt();
                 content->duration = duration;
-                content->part = absl::make_unique<std::string>(value["part"].GetString());
-                items.emplace_back(std::move(content));
+                content->part = std::make_unique<std::string>(value["part"].GetString());
+                ugc_video_info->items.emplace_back(std::move(content));
             }
+            video_info_ = std::move(ugc_video_info);
             return true;
         }
 

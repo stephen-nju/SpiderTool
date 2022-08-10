@@ -34,7 +34,7 @@ struct VideoContent {
 struct UgcVideoInfo : public VideoInfo {
     std::list<std::unique_ptr<VideoContent>> items;
     UgcVideoInfo();
-    ~UgcVideoInfo();
+    virtual ~UgcVideoInfo();
 };
 class Extractor {
 private:

@@ -24,7 +24,7 @@ struct DownloadInfo {
 
 class DownloadTask {
 public:
-    static std::unique_ptr<DownloadTask> from_videoinfo(VideoInfo* video_info);
+    static std::unique_ptr<DownloadTask> from_videoinfo(std::unique_ptr<VideoInfo> video_info);
     virtual std::string get_title() = 0;
     virtual void start_download(absl::string_view save_directory) = 0;
     DownloadTask();
@@ -47,7 +47,7 @@ public:
     bool parse_play_info();
     std::string get_title() override;
     void start_download(absl::string_view save_directory) override;
-    UgcVideoDownloadTask(VideoInfo* video_info);
+    UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info);
     UgcVideoDownloadTask() = delete;
 
     virtual ~UgcVideoDownloadTask();
