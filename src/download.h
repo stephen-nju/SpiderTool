@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <list>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -10,6 +11,18 @@
 #include "cpr/cpr.h"
 #include "extractor.h"
 namespace spider {
+
+// 视频清晰度
+static std::map<int, std::string> quality_map{
+    {120, "4K 超清"},
+    {116, "1080P 60帧"},
+    {112, "1080P 高码率"},
+    {80, "1080P 高清"},
+    {74, "720P 60帧"},
+    {64, "720P 高清"},
+    {32, "480P 清晰"},
+    {16, "360P 流畅"},
+};
 
 struct Section {
     int order;
@@ -39,7 +52,9 @@ protected:
 
 class UgcVideoDownloadTask : public DownloadTask {
 protected:
-    int total_video_size;
+    int total_video_size_;
+    int video_download_quality_;
+    std::unique_ptr<std::vector<int>> video_accept_quality_;
     std::unique_ptr<std::FILE> file_;
     std::unique_ptr<VideoInfo> video_info_;
 

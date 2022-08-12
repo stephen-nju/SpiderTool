@@ -58,7 +58,7 @@ bool Extractor::parse_url(absl::string_view url) {
             // 注意查看查看内存地址
             std::string api = absl::StrCat("https://api.bilibili.com/x/web-interface/view?bvid=", match.str(1).c_str());
             response_ = std::make_unique<cpr::Response>(cpr::Get(cpr::Url(api.data())));
-            printf("%s\n", api.c_str());
+            spdlog::info(api.c_str());
             if (parse_ugc_response()) {
                 return true;
             }
@@ -75,7 +75,7 @@ bool Extractor::parse_ugc_response() {
     auto ugc_video_info = std::make_unique<UgcVideoInfo>();
     ugc_video_info->type = VideoType::Ugc;
     document.Parse(response_->text.c_str());
-    // printf("%s\n", response_->text.c_str());
+    // spdlog::info(response_->text.c_str());
     if (document.HasMember("data")) {
         rapidjson::Value& data = document["data"];
         if (!data.HasMember("title")) {
