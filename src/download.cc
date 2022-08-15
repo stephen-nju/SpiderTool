@@ -2,11 +2,16 @@
 
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
+#include <ios>
+#include <memory>
 #include <stdexcept>
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "cpr/callback.h"
+#include "cpr/session.h"
 #include "rapidjson/document.h"
 #include "spdlog/spdlog.h"
 namespace fs = std::filesystem;
@@ -152,14 +157,25 @@ void UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
                                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
                                  "like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.49"}};
                 // 先发送head请求，获取数据content-length
-                cpr::Session session;
-                session.SetUrl(section_url);
-                session.SetHeader(header);
-                cpr::Response header_response = session.Head();
+                auto session=std::make_shared<cpr::Session>();
+                session->SetUrl(section_url);
+                session->SetHeader(header);
+                cpr::Response header_response = session->Head();
                 // 获取视频总长度
+                int batch_size=1024*1024*10;
                 int content_length = std::stoi(header_response.header["Content-Length"]);
-                cpr::Range range = cpr::Range{0, -1};
-                session.SetRange(range);
+                int count=(content_length / batch_size) + ((content_length % batch_size) ? 1 : 0);
+                spdlog::info("video content count {0}",count);
+                for(int i=0;i<count;i++){
+                    // 改为异步下载
+                    char name[128];
+                    sprintf(name,"vide0_{%d}.flv",i);
+                    std::ofstream of(name,std::ios::binary);
+                    cpr::Range range = cpr::Range{i*batch_size, (i+1)*batch_size};
+                    session->SetRange(range);
+                    session->Download(of);
+                }
+
                 // std::ofstream of("1.flv", std::ios::binary);
                 // session.Download(of);
                 // for (auto& kv : header_response.header) {
