@@ -23,7 +23,7 @@ DownloadTask::~DownloadTask() {
 
 UgcVideoDownloadTask::UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info)
     : DownloadTask(),
-      video_download_quality_(32) {
+      video_download_quality_(64) {
     video_info_ = std::move(video_info);
     download_info_ = std::make_unique<DownloadInfo>();
     // download_info_->durl=std::list<std::unique_ptr<Section>> list;
@@ -42,6 +42,47 @@ std::string UgcVideoDownloadTask::get_title() {
     return *video_info_->title;
 };
 
+bool UgcVideoDownloadTask::get_video_quality() {
+    char raw_api[512];
+    int n = sprintf(raw_api,
+                    "https://api.bilibili.com/x/player/playurl?avid=%d&cid=%d&qn=%d&fourk=1",
+                    video_info_->aid,
+                    video_info_->cid,
+                    this->video_download_quality_);
+    // 初始化下载质量为64，720p高清
+    if (n > 0) {
+        cpr::Response response = cpr::Get(cpr::Url(raw_api));
+        rapidjson::Document doc;
+        doc.Parse(response.text.c_str());
+        if (!doc.HasMember("data")) {
+            return false;
+        }
+        rapidjson::Value& data = doc["data"];
+        if (!data.HasMember("accept_quality")) {
+            return false;
+        }
+        rapidjson::Value& accept_quality = data["accept_quality"].GetArray();
+        video_accept_quality_ = std::make_unique<std::vector<int>>();
+        for (rapidjson::SizeType i = 0; i < accept_quality.Size(); i++) {
+            rapidjson::Value& value = accept_quality[i];
+            video_accept_quality_->push_back(value.GetInt());
+        };
+        spdlog::info("视频支持分辨率为:====================\n");
+        for (auto q = video_accept_quality_->begin(); q != video_accept_quality_->end(); q++) {
+            spdlog::info("分辨率:{0},编码:{1}\n", quality_map[*q], *q);
+        }
+        // spdlog::info("choose your video downlaod quality\n");
+        // 优先选择最高分辨率
+        video_download_quality_ = video_accept_quality_->at(1);
+
+        // scanf("%d", &video_download_quality_);
+
+        return true;
+    }
+
+    return false;
+};
+
 bool UgcVideoDownloadTask::parse_play_info() {
     char api[512];
     int n = sprintf(api,
@@ -49,9 +90,11 @@ bool UgcVideoDownloadTask::parse_play_info() {
                     video_info_->aid,
                     video_info_->cid,
                     this->video_download_quality_);
+    spdlog::info(api);
 
     if (n > 0) {
         cpr::Response response = cpr::Get(cpr::Url(api));
+
         rapidjson::Document document;
         document.Parse(response.text.c_str());
 
@@ -62,15 +105,6 @@ bool UgcVideoDownloadTask::parse_play_info() {
         if (!data.HasMember("durl")) {
             return false;
         }
-        if (!data.HasMember("accept_quality")) {
-            return false;
-        }
-        rapidjson::Value& accept_quality = data["accept_quality"].GetArray();
-        video_accept_quality_ = std::make_unique<std::vector<int>>();
-        for (rapidjson::SizeType i = 0; i < accept_quality.Size(); i++) {
-            rapidjson::Value& value = accept_quality[i];
-            video_accept_quality_->push_back(value.GetInt());
-        };
 
         rapidjson::Value& durl = data["durl"].GetArray();
         for (rapidjson::SizeType i = 0; i < durl.Size(); i++) {
@@ -95,28 +129,47 @@ bool UgcVideoDownloadTask::parse_play_info() {
 };
 
 void UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
-    if (parse_play_info()) {
-        // 解析视频地址，视频后缀等
-        fs::path path(save_directory);
-        if (!fs::exists(path)) {
-            if (!std::filesystem::create_directory(save_directory.data())) {
-                throw std::runtime_error("create saved directory error");
+    if (get_video_quality()) {
+        if (parse_play_info()) {
+            // 解析视频地址，视频后缀等
+            fs::path path(save_directory);
+            if (!fs::exists(path)) {
+                if (!std::filesystem::create_directory(save_directory.data())) {
+                    throw std::runtime_error("create saved directory error");
+                }
             }
-        }
-        for (std::list<std::unique_ptr<Section>>::iterator it = download_info_->durl.begin();
-             it != download_info_->durl.end();
-             it++) {
-            int order = (*it)->order;
-            std::string url = (*it)->section_url;
-            spdlog::info("{}\n", url.c_str());
-            // 构建请求
-            cpr::Url sectiion_url = cpr::Url(url);
-            cpr::Header header = cpr::Header{{"Referer", "https://www.bilibili.com"},
-                                             {"User-Agent",
-                                              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
-                                              "like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.49"}};
-            
-            // 分段视频需要后期合并
+            for (std::list<std::unique_ptr<Section>>::iterator it = download_info_->durl.begin();
+                 it != download_info_->durl.end();
+                 it++) {
+                int order = (*it)->order;
+                std::string url = (*it)->section_url;
+                spdlog::info("{}\n", url.c_str());
+                // 构建请求
+                cpr::Url section_url = cpr::Url(url);
+                cpr::Header header =
+                    cpr::Header{{"Referer", "https://www.bilibili.com"},
+                                {"User-Agent",
+                                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
+                                 "like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.49"}};
+                // 先发送head请求，获取数据content-length
+                cpr::Session session;
+                session.SetUrl(section_url);
+                session.SetHeader(header);
+                cpr::Response header_response = session.Head();
+                // 获取视频总长度
+                int content_length = std::stoi(header_response.header["Content-Length"]);
+                cpr::Range range = cpr::Range{0, -1};
+                session.SetRange(range);
+                // std::ofstream of("1.flv", std::ios::binary);
+                // session.Download(of);
+                // for (auto& kv : header_response.header) {
+                //     spdlog::info("key={0},  value={1}", kv.first, kv.second);
+                // }
+                // rapidjson::Document document;
+                // document.Parse(header_response.text.c_str());
+
+                // 分段视频需要后期合并
+            }
         }
     }
 };

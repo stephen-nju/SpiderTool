@@ -9,7 +9,7 @@
 #include "spider_task.h"
 int main(int argc, char** argv) {
     spdlog::info("start spider......\n");
-    absl::string_view url = "https://www.bilibili.com/video/BV16A411v7AE?from=search&seid=5255426327508319378     ";
+    absl::string_view url = "https://www.bilibili.com/video/BV1UT411L71N?spm_id_from=333.1007.tianma.2-3-6.click";
     const absl::string_view dir = absl::string_view("./");
 
     spider::SpiderTask* task = new spider::SpiderTask(url, dir);

@@ -60,6 +60,7 @@ protected:
 
 public:
     bool parse_play_info();
+    bool get_video_quality();
     std::string get_title() override;
     void start_download(absl::string_view save_directory) override;
     UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info);
