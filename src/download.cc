@@ -169,48 +169,37 @@ void UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
                 session->SetHeader(header);
                 cpr::Response header_response = session->Head();
                 // 获取视频总长度
-                int batch_size = 1024 * 1024 * 4;
+                int batch_size = 1024 * 1024 * 10;
                 int content_length = std::stoi(header_response.header["Content-Length"]);
                 int count = (content_length / batch_size) + ((content_length % batch_size) ? 1 : 0);
                 spdlog::info("video content count {0}", count);
 #pragma omp parallel for num_threads(4)
                 for (int i = 0; i < count; i++) {
-                    // 改为异步下载
-                    spdlog::info("OpenMP Test, 线程编号为: {}\n", omp_get_thread_num());
+                    auto section_sess = std::make_shared<cpr::Session>();
+                    section_sess->SetUrl(section_url);
+                    section_sess->SetHeader(header);
+                    spdlog::info("OpenMP thread id : {}\n", omp_get_thread_num());
                     char name[128];
                     sprintf(name, "video_%d.flv", i);
-                    mutex.lock();
-
                     std::ofstream of(name, std::ios::binary);
                     if (i == count - 1) {
                         cpr::Range range = cpr::Range{i * batch_size, -1};
-                        session->SetRange(range);
-
+                        section_sess->SetRange(range);
                     } else {
                         cpr::Range range = cpr::Range{i * batch_size, (i + 1) * batch_size};
-                        session->SetRange(range);
+                        section_sess->SetRange(range);
                     };
-
-                    session->Download(of);
-                    mutex.unlock();
-                    // session->SetProgressCallback(cpr::ProgressCallback([&](cpr_off_t downloadTotal,
-                    //                                                        cpr_off_t downloadNow,
-                    //                                                        cpr_off_t uploadTotal,
-                    //                                                        cpr_off_t uploadNow,
-                    //                                                        intptr_t userdata) -> bool {
-                    //     std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." <<
-                    //     std::endl; return true;
-                    // }));
-                    // of << res.downloaded_bytes;
+                    section_sess->Download(of);
+                    section_sess->SetProgressCallback(cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
+                                                                                cpr::cpr_off_t downloadNow,
+                                                                                cpr::cpr_off_t uploadTotal,
+                                                                                cpr::cpr_off_t uploadNow,
+                                                                                intptr_t userdata) -> bool {
+                        std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." << std::endl;
+                        return true;
+                    }));
                 }
                 spdlog::info("end of downloading....");
-                // std::ofstream of("1.flv", std::ios::binary);
-                // session.Download(of);
-                // for (auto& kv : header_response.header) {
-                //     spdlog::info("key={0},  value={1}", kv.first, kv.second);
-                // }
-                // rapidjson::Document document;
-                // document.Parse(header_response.text.c_str());
 
                 // 分段视频需要后期合并
             }
