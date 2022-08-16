@@ -3,15 +3,21 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <ios>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "cpr/callback.h"
+#include "cpr/cpr.h"
+#include "cpr/cprtypes.h"
 #include "cpr/session.h"
+#include "omp.h"
 #include "rapidjson/document.h"
 #include "spdlog/spdlog.h"
 namespace fs = std::filesystem;
@@ -157,25 +163,42 @@ void UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
                                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
                                  "like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.49"}};
                 // 先发送head请求，获取数据content-length
-                auto session=std::make_shared<cpr::Session>();
+                auto session = std::make_shared<cpr::Session>();
+            
                 session->SetUrl(section_url);
                 session->SetHeader(header);
                 cpr::Response header_response = session->Head();
                 // 获取视频总长度
-                int batch_size=1024*1024*10;
+                int batch_size = 1024 * 1024 * 10;
                 int content_length = std::stoi(header_response.header["Content-Length"]);
-                int count=(content_length / batch_size) + ((content_length % batch_size) ? 1 : 0);
-                spdlog::info("video content count {0}",count);
-                for(int i=0;i<count;i++){
+                int count = (content_length / batch_size) + ((content_length % batch_size) ? 1 : 0);
+                spdlog::info("video content count {0}", count);
+#pragma omp parallel for num_threads(count)
+                for (int i = 0; i < count; i++) {
                     // 改为异步下载
+                    spdlog::info("OpenMP Test, 线程编号为: {}\n", omp_get_thread_num());
                     char name[128];
-                    sprintf(name,"vide0_{%d}.flv",i);
-                    std::ofstream of(name,std::ios::binary);
-                    cpr::Range range = cpr::Range{i*batch_size, (i+1)*batch_size};
-                    session->SetRange(range);
-                    session->Download(of);
-                }
+                    sprintf(name, "video_%d.flv", i);
+                    std::ofstream of(name, std::ios::binary);
+                    if (i == count - 1) {
+                        cpr::Range range = cpr::Range{i * batch_size, -1};
+                        cpr::Download(of, section_url, header, range);
 
+                    } else {
+                        cpr::Range range = cpr::Range{i * batch_size, (i + 1) * batch_size};
+                        cpr::Download(of, section_url, header, range);
+                    };
+                    // session->SetProgressCallback(cpr::ProgressCallback([&](cpr_off_t downloadTotal,
+                    //                                                        cpr_off_t downloadNow,
+                    //                                                        cpr_off_t uploadTotal,
+                    //                                                        cpr_off_t uploadNow,
+                    //                                                        intptr_t userdata) -> bool {
+                    //     std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." <<
+                    //     std::endl; return true;
+                    // }));
+                    // of << res.downloaded_bytes;
+                }
+                spdlog::info("end of downloading....");
                 // std::ofstream of("1.flv", std::ios::binary);
                 // session.Download(of);
                 // for (auto& kv : header_response.header) {
