@@ -3,12 +3,11 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
-#include <future>
 #include <ios>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
-#include <vector>
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
@@ -23,6 +22,7 @@
 namespace fs = std::filesystem;
 
 namespace spider {
+std::mutex mutex;
 
 DownloadInfo::DownloadInfo(){};
 DownloadInfo::~DownloadInfo(){};
@@ -164,30 +164,35 @@ void UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
                                  "like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.49"}};
                 // 先发送head请求，获取数据content-length
                 auto session = std::make_shared<cpr::Session>();
-            
+
                 session->SetUrl(section_url);
                 session->SetHeader(header);
                 cpr::Response header_response = session->Head();
                 // 获取视频总长度
-                int batch_size = 1024 * 1024 * 10;
+                int batch_size = 1024 * 1024 * 4;
                 int content_length = std::stoi(header_response.header["Content-Length"]);
                 int count = (content_length / batch_size) + ((content_length % batch_size) ? 1 : 0);
                 spdlog::info("video content count {0}", count);
-#pragma omp parallel for num_threads(count)
+#pragma omp parallel for num_threads(4)
                 for (int i = 0; i < count; i++) {
                     // 改为异步下载
                     spdlog::info("OpenMP Test, 线程编号为: {}\n", omp_get_thread_num());
                     char name[128];
                     sprintf(name, "video_%d.flv", i);
+                    mutex.lock();
+
                     std::ofstream of(name, std::ios::binary);
                     if (i == count - 1) {
                         cpr::Range range = cpr::Range{i * batch_size, -1};
-                        cpr::Download(of, section_url, header, range);
+                        session->SetRange(range);
 
                     } else {
                         cpr::Range range = cpr::Range{i * batch_size, (i + 1) * batch_size};
-                        cpr::Download(of, section_url, header, range);
+                        session->SetRange(range);
                     };
+
+                    session->Download(of);
+                    mutex.unlock();
                     // session->SetProgressCallback(cpr::ProgressCallback([&](cpr_off_t downloadTotal,
                     //                                                        cpr_off_t downloadNow,
                     //                                                        cpr_off_t uploadTotal,
