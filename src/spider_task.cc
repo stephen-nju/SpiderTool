@@ -20,7 +20,9 @@ void SpiderTask::run() {
         std::unique_ptr<VideoInfo> video_info = extractor_->get_video_info();
         download_ = DownloadTask::from_videoinfo(std::move(video_info));
         if (download_ != nullptr) {
-            download_->start_download(save_directory_);
+            if (download_->start_download(save_directory_)) {
+                spdlog::info("start download video");
+            };
         }
     };
 };

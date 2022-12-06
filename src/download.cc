@@ -34,7 +34,7 @@ DownloadTask::~DownloadTask() {
 
 UgcVideoDownloadTask::UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info)
     : DownloadTask(),
-      video_download_quality_(64) {
+      video_download_quality_(32) {
     video_info_ = std::move(video_info);
     download_info_ = std::make_unique<DownloadInfo>();
     // download_info_->durl=std::list<std::unique_ptr<Section>> list;
@@ -54,6 +54,11 @@ std::string UgcVideoDownloadTask::get_title() {
 };
 
 bool UgcVideoDownloadTask::get_video_quality() {
+    cpr::Header header = cpr::Header{
+        {"User-Agent", "Mozilla/5.0"},
+        {"Referer", "https://www.bilibili.com"},
+    };  // namespace spider
+    cpr::Session session;
     char raw_api[512];
     int n = sprintf(raw_api,
                     "https://api.bilibili.com/x/player/playurl?avid=%d&cid=%d&qn=%d&fourk=1",
@@ -62,10 +67,17 @@ bool UgcVideoDownloadTask::get_video_quality() {
                     this->video_download_quality_);
     // 初始化下载质量为64，720p高清
     if (n > 0) {
-        cpr::Response response = cpr::Get(cpr::Url(raw_api));
+        cpr::Url url = cpr::Url(raw_api);
+        session.SetUrl(url);
+        session.SetHeader(header);
+        cpr::Response response = session.Get();
+        spdlog::info(raw_api);
+
         rapidjson::Document doc;
+        spdlog::info(response.text.c_str());
         doc.Parse(response.text.c_str());
         if (!doc.HasMember("data")) {
+            spdlog::warn("parse video quality error");
             return false;
         }
         rapidjson::Value& data = doc["data"];
@@ -105,8 +117,8 @@ bool UgcVideoDownloadTask::parse_play_info() {
 
     if (n > 0) {
         cpr::Response response = cpr::Get(cpr::Url(api));
-
         rapidjson::Document document;
+        spdlog::info(response.text.c_str());
         document.Parse(response.text.c_str());
 
         if (!document.HasMember("data")) {
@@ -139,14 +151,15 @@ bool UgcVideoDownloadTask::parse_play_info() {
     return false;
 };
 
-void UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
+bool UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
     if (get_video_quality()) {
         if (parse_play_info()) {
             // 解析视频地址，视频后缀等
             fs::path path(save_directory);
             if (!fs::exists(path)) {
                 if (!std::filesystem::create_directory(save_directory.data())) {
-                    throw std::runtime_error("create saved directory error");
+                    spdlog::error("creat download directory error");
+                    return false;
                 }
             }
             for (std::list<std::unique_ptr<Section>>::iterator it = download_info_->durl.begin();
@@ -180,7 +193,7 @@ void UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
                     section_sess->SetHeader(header);
                     spdlog::info("OpenMP thread id : {}\n", omp_get_thread_num());
                     char name[128];
-                    sprintf(name, "video_%d.flv", i);
+                    sprintf(name, "video_%d.mp4", i);
                     std::ofstream of(name, std::ios::binary);
                     if (i == count - 1) {
                         cpr::Range range = cpr::Range{i * batch_size, -1};
@@ -200,11 +213,16 @@ void UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
                     }));
                 }
                 spdlog::info("end of downloading....");
+                return true;
 
                 // 分段视频需要后期合并
             }
         }
     }
+    return false;
+};
+bool UgcVideoDownloadTask::end_download() {
+    return true;
 };
 UgcVideoDownloadTask::~UgcVideoDownloadTask(){};
 

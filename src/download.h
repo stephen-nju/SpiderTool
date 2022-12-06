@@ -25,6 +25,7 @@ static std::map<int, std::string> quality_map{
 };
 
 struct Section {
+    // 用于下载系列影片
     int order;
     std::string section_url;
 };
@@ -39,7 +40,9 @@ class DownloadTask {
 public:
     static std::unique_ptr<DownloadTask> from_videoinfo(std::unique_ptr<VideoInfo> video_info);
     virtual std::string get_title() = 0;
-    virtual void start_download(absl::string_view save_directory) = 0;
+    virtual bool start_download(absl::string_view save_directory) = 0;
+    // 纯虚函数
+    virtual bool end_download() = 0;
     DownloadTask();
     virtual ~DownloadTask();
 
@@ -62,7 +65,8 @@ public:
     bool parse_play_info();
     bool get_video_quality();
     std::string get_title() override;
-    void start_download(absl::string_view save_directory) override;
+    bool start_download(absl::string_view save_directory) override;
+    bool end_download() override;
     UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info);
     UgcVideoDownloadTask() = delete;
 
