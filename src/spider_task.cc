@@ -22,6 +22,11 @@ void SpiderTask::run() {
         if (download_ != nullptr) {
             if (download_->start_download(save_directory_)) {
                 spdlog::info("start download video");
+                if (download_->download_video()) {
+                    if (download_->end_download()) {
+                        spdlog::info("success download video");
+                    }
+                }
             };
         }
     };

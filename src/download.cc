@@ -95,7 +95,7 @@ bool UgcVideoDownloadTask::get_video_quality() {
             std::make_unique<std::unordered_map<int, std::string>>();
         for (rapidjson::SizeType i = 0; i < support_formats.Size(); i++) {
             rapidjson::Value& formats = support_formats[i];
-            rapidjson::Value& format_info = formats.GetObject();
+            rapidjson::Value& format_info = formats.GetObj();
             quality_format_map->emplace(format_info["quality"].GetInt(), format_info["format"].GetString());
         }
 
