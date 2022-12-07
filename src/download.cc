@@ -215,7 +215,9 @@ bool UgcVideoDownloadTask::download_video() {
         if (count == 1) {
             char video_name[128];
             sprintf(video_name, "%s.%s", download_info_->video_name.c_str(), download_info_->video_format.c_str());
-            
+            std::ofstream of(video_name, std::ios::binary);
+            session->SetRange(cpr::Range(0, content_length));
+            session->Download(of);
             // 视频数量小视频直接下载
         } else {
 #pragma omp parallel for num_threads(4)
@@ -232,19 +234,17 @@ bool UgcVideoDownloadTask::download_video() {
                     session->SetRange(range);
                 };
                 session->Download(of);
-                session->SetProgressCallback(cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
-                                                                       cpr::cpr_off_t downloadNow,
-                                                                       cpr::cpr_off_t uploadTotal,
-                                                                       cpr::cpr_off_t uploadNow,
-                                                                       intptr_t userdata) -> bool {
-                    std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." << std::endl;
-                    return true;
-                }));
+                // session->SetProgressCallback(cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
+                //                                                        cpr::cpr_off_t downloadNow,
+                //                                                        cpr::cpr_off_t uploadTotal,
+                //                                                        cpr::cpr_off_t uploadNow,
+                //                                                        intptr_t userdata) -> bool {
+                //     std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." << std::endl;
+                // }));
             }
-            spdlog::info("end of downloading....");
-            return true;
         }
     }
+    return true;
 };
 
 bool UgcVideoDownloadTask::end_download() {
