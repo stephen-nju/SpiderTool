@@ -124,6 +124,7 @@
         "span": "cpp",
         "strstream": "cpp",
         "syncstream": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "*.tcc": "cpp"
     }
 }

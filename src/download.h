@@ -31,6 +31,9 @@ struct Section {
 };
 struct DownloadInfo {
     std::string video_name;
+    // download video format mp4 flv .....
+    std::string video_format;
+    // download video url .......
     std::list<std::unique_ptr<Section>> durl;
     DownloadInfo();
     ~DownloadInfo();
@@ -42,6 +45,7 @@ public:
     virtual std::string get_title() = 0;
     virtual bool start_download(absl::string_view save_directory) = 0;
     // 纯虚函数
+    virtual bool download_video() = 0;
     virtual bool end_download() = 0;
     DownloadTask();
     virtual ~DownloadTask();
@@ -66,6 +70,7 @@ public:
     bool get_video_quality();
     std::string get_title() override;
     bool start_download(absl::string_view save_directory) override;
+    bool download_video() override;
     bool end_download() override;
     UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info);
     UgcVideoDownloadTask() = delete;
