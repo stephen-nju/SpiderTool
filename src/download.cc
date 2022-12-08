@@ -22,7 +22,17 @@
 namespace fs = std::filesystem;
 
 namespace spider {
-std::mutex mutex;
+
+bool write_data(std::string data, intptr_t userdata) {
+    FILE* pf = reinterpret_cast<FILE*>(userdata);
+    if (pf != nullptr) {
+        // std::cout << "userdata=" << userdata << "  recv data size: " << data.size() << std::endl;
+
+        fwrite(data.data(), sizeof(char), data.size(), pf);
+        return true;
+    }
+    return false;
+};
 
 DownloadInfo::DownloadInfo(){};
 DownloadInfo::~DownloadInfo(){};
@@ -222,25 +232,33 @@ bool UgcVideoDownloadTask::download_video() {
         } else {
 #pragma omp parallel for num_threads(4)
             for (int i = 0; i < count; i++) {
+                // 避免并行冲突
+                auto section_sess = std::make_shared<cpr::Session>();
+                section_sess->SetUrl(section_url);
+                section_sess->SetHeader(header);
                 spdlog::info("OpenMP thread id : {}\n", omp_get_thread_num());
                 char name[128];
                 sprintf(name, "tmp_video_%d.%s", i, download_info_->video_format.c_str());
+                FILE* output_file = fopen(name, "wb");
                 std::ofstream of(name, std::ios::binary);
                 if (i == count - 1) {
                     cpr::Range range = cpr::Range{i * batch_size, -1};
-                    session->SetRange(range);
+                    section_sess->SetRange(range);
                 } else {
                     cpr::Range range = cpr::Range{i * batch_size, (i + 1) * batch_size};
-                    session->SetRange(range);
+                    section_sess->SetRange(range);
                 };
-                session->Download(of);
-                // session->SetProgressCallback(cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
-                //                                                        cpr::cpr_off_t downloadNow,
-                //                                                        cpr::cpr_off_t uploadTotal,
-                //                                                        cpr::cpr_off_t uploadNow,
-                //                                                        intptr_t userdata) -> bool {
-                //     std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." << std::endl;
-                // }));
+                section_sess->SetProgressCallback(cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
+                                                                            cpr::cpr_off_t downloadNow,
+                                                                            cpr::cpr_off_t uploadTotal,
+                                                                            cpr::cpr_off_t uploadNow,
+                                                                            intptr_t userdata) -> bool {
+                    std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." << std::endl;
+                    return true;
+                }));
+                // section_sess->Download(of);
+                section_sess->Download(cpr::WriteCallback{write_data, reinterpret_cast<intptr_t>(output_file)});
+                fclose(output_file);
             }
         }
     }
