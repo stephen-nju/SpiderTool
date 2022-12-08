@@ -19,16 +19,6 @@ void SpiderTask::run() {
     if (extractor_->init(spider_url_)) {
         std::unique_ptr<VideoInfo> video_info = extractor_->get_video_info();
         download_ = DownloadTask::from_videoinfo(std::move(video_info));
-        if (download_ != nullptr) {
-            if (download_->start_download(save_directory_)) {
-                spdlog::info("start download video");
-                if (download_->download_video()) {
-                    if (download_->end_download()) {
-                        spdlog::info("success download video");
-                    }
-                }
-            };
-        }
     };
 };
 }  // namespace spider

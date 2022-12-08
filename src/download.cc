@@ -33,10 +33,19 @@ bool write_data(std::string data, intptr_t userdata) {
     return false;
 };
 
-DownloadInfo::DownloadInfo(){};
-DownloadInfo::~DownloadInfo(){};
-
 DownloadTask::DownloadTask(){};
+bool DownloadTask::run(std::string& save_directory) {
+    if (!start_download()) {
+        return false;
+    };
+    if (!download_video(save_directory)) {
+        return false;
+    };
+    if (!end_download()) {
+        return false;
+    }
+    return true;
+};
 DownloadTask::~DownloadTask() {
     spdlog::info("runing DownloadTask Deconstruction");
 };
@@ -45,7 +54,6 @@ UgcVideoDownloadTask::UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info
     : DownloadTask(),
       video_download_quality_(32) {
     video_info_ = std::move(video_info);
-    download_info_ = std::make_unique<DownloadInfo>();
     // download_info_->durl=std::list<std::unique_ptr<Section>> list;
 };
 
@@ -179,18 +187,19 @@ bool UgcVideoDownloadTask::parse_play_info() {
 };
 
 bool UgcVideoDownloadTask::start_download() {
-    if (get_video_quality()) {
-        if (parse_play_info()) {
-            return true;
-        }
-    };
-    return false;
+    if (!get_video_quality()) {
+        return false;
+    }
+    if (!parse_play_info()) {
+        return false;
+    }
+    return true;
 }
 
 bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
-    fs::path path(save_directory);
-    if (!fs::exists(path)) {
-        if (!std::filesystem::create_directory(save_directory.data())) {
+    fs::path directory(save_directory);
+    if (!fs::exists(directory)) {
+        if (!std::filesystem::create_directory(directory)) {
             return false;
         }
     }
@@ -228,10 +237,11 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
             // 视频数量小视频直接下载
         } else {
             // 创建临时目录
-            absl::string_view tmp = absl::StrCat(save_directory, "/", download_info_->video_name);
-            fs::path tmp_dir(tmp);
+            fs::path tmp_dir(directory);
+            tmp_dir.append(download_info_->video_name);
+            spdlog::info("{}", tmp_dir.string());
             if (!fs::exists(tmp_dir)) {
-                if (!std::filesystem::create_directory(tmp_dir.data())) {
+                if (!std::filesystem::create_directory(tmp_dir)) {
                     return false;
                 }
             }
@@ -243,7 +253,10 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
                 spdlog::info("OpenMP thread id : {}\n", omp_get_thread_num());
                 char name[128];
                 sprintf(name, "tmp_video_%d.%s", i, download_info_->video_format.c_str());
-                FILE* output_file = fopen(name, "wb");
+                fs::path video_path(tmp_dir);
+                video_path.append(name);
+                spdlog::info("{}", video_path.string());
+                FILE* output_file = fopen(video_path.string().c_str(), "wb");
                 std::ofstream of(name, std::ios::binary);
                 if (i == count - 1) {
                     cpr::Range range = cpr::Range{i * batch_size, -1};
@@ -252,14 +265,14 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
                     cpr::Range range = cpr::Range{i * batch_size, (i + 1) * batch_size};
                     section_sess->SetRange(range);
                 };
-                section_sess->SetProgressCallback(cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
-                                                                            cpr::cpr_off_t downloadNow,
-                                                                            cpr::cpr_off_t uploadTotal,
-                                                                            cpr::cpr_off_t uploadNow,
-                                                                            intptr_t userdata) -> bool {
-                    std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." << std::endl;
-                    return true;
-                }));
+                // section_sess->SetProgressCallback(cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
+                //                                                             cpr::cpr_off_t downloadNow,
+                //                                                             cpr::cpr_off_t uploadTotal,
+                //                                                             cpr::cpr_off_t uploadNow,
+                //                                                             intptr_t userdata) -> bool {
+                //     std::cout << "Downloaded " << downloadNow << " / " << downloadTotal << " bytes." << std::endl;
+                //     return true;
+                // }));
                 // section_sess->Download(of);
                 section_sess->Download(cpr::WriteCallback{write_data, reinterpret_cast<intptr_t>(output_file)});
                 fclose(output_file);

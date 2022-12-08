@@ -125,6 +125,7 @@
         "strstream": "cpp",
         "syncstream": "cpp",
         "*.inc": "cpp",
-        "*.tcc": "cpp"
+        "*.tcc": "cpp",
+        "resumable": "cpp"
     }
 }

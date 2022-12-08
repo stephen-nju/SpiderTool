@@ -24,24 +24,20 @@ static std::map<int, std::string> quality_map{
     {16, "360P 流畅"},
 };
 
-struct Section {
-    // 用于下载系列影片
-    int order;
-    std::string section_url;
-};
-struct DownloadInfo {
-    std::string video_name;
-    // download video format mp4 flv .....
-    std::string video_format;
-    // download video url .......
-    std::list<std::unique_ptr<Section>> durl;
-    DownloadInfo();
-    ~DownloadInfo();
-};
-
 class DownloadTask {
 public:
+    // 初始化
+    struct DownloadInfo {
+        int video_total_size;
+        int video_quality;
+        std::string video_format;
+        std::string durl;
+        DownloadInfo();
+        virtual ~DownloadInfo();
+    };
+
     static std::unique_ptr<DownloadTask> from_videoinfo(std::unique_ptr<VideoInfo> video_info);
+    bool run(std::string& save_sirectory);
     virtual std::string get_title() = 0;
     virtual bool start_download() = 0;
     // 纯虚函数
@@ -52,14 +48,12 @@ public:
 
 protected:
     // 文件路径
-    std::unique_ptr<DownloadInfo> download_info_;
     std::unique_ptr<std::string> path_;
     std::unique_ptr<cpr::Response> response_;
 };
 
 class UgcVideoDownloadTask : public DownloadTask {
 protected:
-    int total_video_size_;
     int video_download_quality_;
     std::unique_ptr<std::vector<int>> video_accept_quality_;
     std::unique_ptr<std::FILE> file_;
