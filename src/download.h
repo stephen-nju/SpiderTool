@@ -43,9 +43,9 @@ class DownloadTask {
 public:
     static std::unique_ptr<DownloadTask> from_videoinfo(std::unique_ptr<VideoInfo> video_info);
     virtual std::string get_title() = 0;
-    virtual bool start_download(absl::string_view save_directory) = 0;
+    virtual bool start_download() = 0;
     // 纯虚函数
-    virtual bool download_video() = 0;
+    virtual bool download_video(absl::string_view save_direcotry) = 0;
     virtual bool end_download() = 0;
     DownloadTask();
     virtual ~DownloadTask();
@@ -69,8 +69,8 @@ public:
     bool parse_play_info();
     bool get_video_quality();
     std::string get_title() override;
-    bool start_download(absl::string_view save_directory) override;
-    bool download_video() override;
+    bool start_download() override;
+    bool download_video(absl::string_view save_directory) override;
     bool end_download() override;
     UgcVideoDownloadTask(std::unique_ptr<VideoInfo> video_info);
     UgcVideoDownloadTask() = delete;

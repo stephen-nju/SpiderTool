@@ -27,7 +27,6 @@ bool write_data(std::string data, intptr_t userdata) {
     FILE* pf = reinterpret_cast<FILE*>(userdata);
     if (pf != nullptr) {
         // std::cout << "userdata=" << userdata << "  recv data size: " << data.size() << std::endl;
-
         fwrite(data.data(), sizeof(char), data.size(), pf);
         return true;
     }
@@ -179,24 +178,22 @@ bool UgcVideoDownloadTask::parse_play_info() {
     return false;
 };
 
-bool UgcVideoDownloadTask::start_download(absl::string_view save_directory) {
+bool UgcVideoDownloadTask::start_download() {
     if (get_video_quality()) {
         if (parse_play_info()) {
-            // 解析视频地址，视频后缀等
-            fs::path path(save_directory);
-            if (!fs::exists(path)) {
-                if (std::filesystem::create_directory(save_directory.data())) {
-                    return true;
-                }
-            } else {
-                return true;
-            }
+            return true;
         }
     };
     return false;
 }
 
-bool UgcVideoDownloadTask::download_video() {
+bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
+    fs::path path(save_directory);
+    if (!fs::exists(path)) {
+        if (!std::filesystem::create_directory(save_directory.data())) {
+            return false;
+        }
+    }
     for (std::list<std::unique_ptr<Section>>::iterator it = download_info_->durl.begin();
          it != download_info_->durl.end();
          it++) {
@@ -230,9 +227,16 @@ bool UgcVideoDownloadTask::download_video() {
             session->Download(of);
             // 视频数量小视频直接下载
         } else {
+            // 创建临时目录
+            absl::string_view tmp = absl::StrCat(save_directory, "/", download_info_->video_name);
+            fs::path tmp_dir(tmp);
+            if (!fs::exists(tmp_dir)) {
+                if (!std::filesystem::create_directory(tmp_dir.data())) {
+                    return false;
+                }
+            }
 #pragma omp parallel for num_threads(4)
             for (int i = 0; i < count; i++) {
-                // 避免并行冲突
                 auto section_sess = std::make_shared<cpr::Session>();
                 section_sess->SetUrl(section_url);
                 section_sess->SetHeader(header);
