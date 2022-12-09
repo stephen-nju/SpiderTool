@@ -28,16 +28,17 @@ class DownloadTask {
 public:
     // 初始化
     struct DownloadInfo {
-        int video_total_size;
         int video_quality;
         std::string video_format;
         std::string durl;
         DownloadInfo();
         virtual ~DownloadInfo();
     };
-
+    struct UgcDownloadInfo : DownloadInfo {
+        UgcDownloadInfo() : DownloadInfo(){};
+    };
     static std::unique_ptr<DownloadTask> from_videoinfo(std::unique_ptr<VideoInfo> video_info);
-    bool run(std::string& save_sirectory);
+    bool run(absl::string_view save_directory);
     virtual std::string get_title() = 0;
     virtual bool start_download() = 0;
     // 纯虚函数
@@ -47,17 +48,15 @@ public:
     virtual ~DownloadTask();
 
 protected:
-    // 文件路径
+    // 视频下载的信息
     std::unique_ptr<std::string> path_;
     std::unique_ptr<cpr::Response> response_;
 };
 
 class UgcVideoDownloadTask : public DownloadTask {
 protected:
-    int video_download_quality_;
-    std::unique_ptr<std::vector<int>> video_accept_quality_;
-    std::unique_ptr<std::FILE> file_;
     std::unique_ptr<VideoInfo> video_info_;
+    std::unique_ptr<DownloadInfo> download_info_;
 
 public:
     bool parse_play_info();

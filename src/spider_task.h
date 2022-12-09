@@ -20,7 +20,7 @@ private:
     std::unique_ptr<DownloadTask> download_;
 
 public:
-    explicit SpiderTask(absl::string_view url, const absl::string_view& save_diretory);
+    explicit SpiderTask(absl::string_view url, absl::string_view save_diretory);
     ~SpiderTask();
     void run();
 };
