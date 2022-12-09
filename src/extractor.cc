@@ -6,6 +6,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
 #include "rapidjson/document.h"
@@ -87,7 +88,12 @@ bool Extractor::parse_ugc_response() {
         if (!data.HasMember("cid")) {
             return false;
         }
-        ugc_video_info->title = std::make_unique<std::string>(data["title"].GetString());
+        std::string title = data["title"].GetString();
+        // 将标题标准化（包括\ / 替换成下划线）
+        std::string norm_title =
+            absl::StrReplaceAll(title, {{"/", "_"}, {"\\", "_"}, {":", "_"}, {"|", "_"}, {"|", "_"}});
+
+        ugc_video_info->title = std::make_unique<std::string>(norm_title);
         ugc_video_info->aid = data["aid"].GetInt();
         ugc_video_info->cid = data["cid"].GetInt();
 

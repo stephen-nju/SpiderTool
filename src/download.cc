@@ -22,6 +22,7 @@
 namespace fs = std::filesystem;
 
 namespace spider {
+#define BUFFER_SIZE 1024
 
 bool write_data(std::string data, intptr_t userdata) {
     FILE* pf = reinterpret_cast<FILE*>(userdata);
@@ -72,7 +73,8 @@ std::unique_ptr<DownloadTask> DownloadTask::from_videoinfo(std::unique_ptr<Video
 }
 
 std::string UgcVideoDownloadTask::get_title() {
-    return *video_info_->title;
+    std::string title = *video_info_->title;
+    return title;
 };
 
 bool UgcVideoDownloadTask::get_video_quality() {
@@ -126,9 +128,10 @@ bool UgcVideoDownloadTask::get_video_quality() {
             rapidjson::Value& value = accept_quality[i];
             video_accept_quality.push_back(value.GetInt());
         };
-        spdlog::info("解析视频支持的分辨率:====================");
         for (auto q = 0; q < video_accept_quality.size(); q++) {
-            spdlog::info("分辨率:{0},编码:{1}\n", quality_map[video_accept_quality.at(q)], video_accept_quality.at(q));
+            spdlog::info("video resolution ratio :{0}, code:{1}\n",
+                         quality_map[video_accept_quality.at(q)],
+                         video_accept_quality.at(q));
         }
         // spdlog::info("choose your video downlaod quality\n");
         // 优先选择最高分辨率
@@ -137,7 +140,6 @@ bool UgcVideoDownloadTask::get_video_quality() {
 
         download_info_->video_format = quality_format_map->at(download_info_->video_quality);
         // 解析分辨率支持格式
-
         return true;
     }
 
@@ -230,21 +232,22 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
     // 计算视频的分段的数量
     int count = (content_length / batch_size) + ((content_length % batch_size) ? 1 : 0);
     spdlog::info("video content count {0}", count);
-
+    char video_name[128];
+    sprintf(video_name, "%s.%s", this->get_title().c_str(), download_info_->video_format.c_str());
+    // 复制字符串
+    sprintf(video_path_, "%s", video_name);
     if (count == 1) {
-        char video_name[128];
-        sprintf(video_name, "%s.%s", this->get_title().c_str(), download_info_->video_format.c_str());
         std::ofstream of(video_name, std::ios::binary);
         session->SetRange(cpr::Range(0, content_length));
         session->Download(of);
+        download_info_->merge_finished = true;
         // 视频数量小视频直接下载
     } else {
         // 创建临时目录
         char temp[128];
-        sprintf(temp, "%s/tmp", save_directory.data());
-        spdlog::info(temp);
-        fs::path tmp_dir(temp);
-
+        sprintf(temp, "%s%s", save_directory.data(), this->get_title().c_str());
+        // windows 需要系统语言utf8支持
+        fs::path tmp_dir = temp;
         if (!fs::exists(tmp_dir)) {
             if (!std::filesystem::create_directory(tmp_dir)) {
                 return false;
@@ -260,9 +263,10 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
             sprintf(name, "tmp_video_%d.%s", i, download_info_->video_format.c_str());
             fs::path video_path(tmp_dir);
             video_path.append(name);
-            spdlog::info("{}", video_path.string());
+            // spdlog::info("{}", video_path.string());
+            download_info_->temp_files.emplace_back(video_path.string());
             FILE* output_file = fopen(video_path.string().c_str(), "wb");
-            std::ofstream of(name, std::ios::binary);
+            // std::ofstream of(name, std::ios::binary);
             if (i == count - 1) {
                 cpr::Range range = cpr::Range{i * batch_size, -1};
                 section_sess->SetRange(range);
@@ -282,12 +286,43 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
             section_sess->Download(cpr::WriteCallback{write_data, reinterpret_cast<intptr_t>(output_file)});
             fclose(output_file);
         }
+
+        download_info_->dowload_finished = true;
     }
 
     return true;
 };
 
 bool UgcVideoDownloadTask::end_download() {
+    // 合并下载的文件
+    if (!download_info_->dowload_finished) {
+        return false;
+    }
+    if (!download_info_->merge_finished) {
+        FILE* output = fopen(video_path_, "wb+");
+        if (output = nullptr) {
+            spdlog::error("merge files error can not open file");
+            fclose(output);
+            return false;
+        }
+        for (auto p = download_info_->temp_files.begin(); p != download_info_->temp_files.end(); p++) {
+            std::string video_path = *p;
+            FILE* input = fopen(video_path.c_str(), "rb");
+            if (input == nullptr) {
+                spdlog::error("can not open input file");
+                fclose(input);
+                fclose(output);
+                return false;
+            }
+            unsigned char buf[BUFFER_SIZE];
+            while (!feof(input)) {
+                size_t n = fread(buf, sizeof(unsigned char), BUFFER_SIZE, input);
+                fwrite(buf, sizeof(unsigned char), n, output);
+            };
+            fclose(input);
+        }
+        fclose(output);
+    }
     return true;
 };
 UgcVideoDownloadTask::~UgcVideoDownloadTask(){};

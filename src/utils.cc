@@ -15,6 +15,9 @@ bool is_whitespace_char(int c) {
     return cat[0] == 'Z' && cat[1] == 's';
 }
 
+bool is_illegal_char(int c) {
+    return true;
+}
 ssize_t utf8proc_iterate_reversed(const uint8_t* str, ssize_t start, int32_t* dst) {
     ssize_t len = 0;
 
@@ -76,4 +79,9 @@ absl::string_view strip(absl::string_view s) {
     absl::string_view s2 = rstrip(s1);
     return s2;
 };
+
+// absl::string_view legalized_file_name(absl::string_view s) {
+//     const char* str = s.data();
+//     uint8_t* ptr = (uint8_t*)str;
+// };
 }  // namespace spider

@@ -31,10 +31,13 @@ public:
         int video_quality;
         std::string video_format;
         std::string durl;
+        bool dowload_finished = false;
+        bool merge_finished = false;
         DownloadInfo();
         virtual ~DownloadInfo();
     };
     struct UgcDownloadInfo : DownloadInfo {
+        std::vector<std::string> temp_files;
         UgcDownloadInfo() : DownloadInfo(){};
     };
     static std::unique_ptr<DownloadTask> from_videoinfo(std::unique_ptr<VideoInfo> video_info);
@@ -49,14 +52,14 @@ public:
 
 protected:
     // 视频下载的信息
-    std::unique_ptr<std::string> path_;
     std::unique_ptr<cpr::Response> response_;
 };
 
 class UgcVideoDownloadTask : public DownloadTask {
 protected:
+    char video_path_[128];
     std::unique_ptr<VideoInfo> video_info_;
-    std::unique_ptr<DownloadInfo> download_info_;
+    std::unique_ptr<UgcDownloadInfo> download_info_;
 
 public:
     bool parse_play_info();
