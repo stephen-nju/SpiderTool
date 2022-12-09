@@ -22,7 +22,7 @@
 namespace fs = std::filesystem;
 
 namespace spider {
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 10240
 
 bool write_data(std::string data, intptr_t userdata) {
     FILE* pf = reinterpret_cast<FILE*>(userdata);
@@ -263,8 +263,8 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
             sprintf(name, "tmp_video_%d.%s", i, download_info_->video_format.c_str());
             fs::path video_path(tmp_dir);
             video_path.append(name);
-            // spdlog::info("{}", video_path.string());
-            download_info_->temp_files.emplace_back(video_path.string());
+            // 合并video需要按照文件顺序
+            download_info_->index_video_map_.emplace(i,video_path.string());
             FILE* output_file = fopen(video_path.string().c_str(), "wb");
             // std::ofstream of(name, std::ios::binary);
             if (i == count - 1) {
@@ -299,14 +299,15 @@ bool UgcVideoDownloadTask::end_download() {
         return false;
     }
     if (!download_info_->merge_finished) {
-        FILE* output = fopen(video_path_, "wb+");
-        if (output = nullptr) {
+        FILE* output = fopen(video_path_, "wb");
+        if (output == nullptr) {
             spdlog::error("merge files error can not open file");
             fclose(output);
             return false;
         }
-        for (auto p = download_info_->temp_files.begin(); p != download_info_->temp_files.end(); p++) {
-            std::string video_path = *p;
+        for (auto i=0;i<download_info_->index_video_map_.size();i++) {
+            std::string video_path = download_info_->index_video_map_.at(i);
+            spdlog::info(video_path);
             FILE* input = fopen(video_path.c_str(), "rb");
             if (input == nullptr) {
                 spdlog::error("can not open input file");
@@ -315,8 +316,11 @@ bool UgcVideoDownloadTask::end_download() {
                 return false;
             }
             unsigned char buf[BUFFER_SIZE];
-            while (!feof(input)) {
+            while (!feof(input)){
                 size_t n = fread(buf, sizeof(unsigned char), BUFFER_SIZE, input);
+                if(n!=BUFFER_SIZE){
+                    spdlog::info("video size {}",n);
+                }
                 fwrite(buf, sizeof(unsigned char), n, output);
             };
             fclose(input);

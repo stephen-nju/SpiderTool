@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "absl/strings/string_view.h"
 #include "cpr/cpr.h"
@@ -37,7 +38,8 @@ public:
         virtual ~DownloadInfo();
     };
     struct UgcDownloadInfo : DownloadInfo {
-        std::vector<std::string> temp_files;
+        // 合并分段下载视频合成顺序
+        std::unordered_map<int, std::string> index_video_map_;
         UgcDownloadInfo() : DownloadInfo(){};
     };
     static std::unique_ptr<DownloadTask> from_videoinfo(std::unique_ptr<VideoInfo> video_info);
