@@ -246,6 +246,7 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
         // 创建临时目录
         char temp[128];
         sprintf(temp, "%s%s", save_directory.data(), this->get_title().c_str());
+        download_info_->tmp_dir = temp;
         // windows 需要系统语言utf8支持
         fs::path tmp_dir = temp;
         if (!fs::exists(tmp_dir)) {
@@ -253,6 +254,9 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
                 return false;
             }
         }
+        // 多线程上锁
+        omp_lock_t lock;
+        omp_init_lock(&lock);
 #pragma omp parallel for num_threads(4)
         for (int i = 0; i < count; i++) {
             auto section_sess = std::make_shared<cpr::Session>();
@@ -263,15 +267,20 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
             sprintf(name, "tmp_video_%d.%s", i, download_info_->video_format.c_str());
             fs::path video_path(tmp_dir);
             video_path.append(name);
-            // 合并video需要按照文件顺序
-            download_info_->index_video_map_.emplace(i,video_path.string());
+            // 合并video需要按照文件顺序,unorded_map 不是线程安全的
+            omp_set_lock(&lock);
+            download_info_->index_video_map_.emplace(i, video_path.string());
+            omp_unset_lock(&lock);
             FILE* output_file = fopen(video_path.string().c_str(), "wb");
             // std::ofstream of(name, std::ios::binary);
-            if (i == count - 1) {
+            if (i == 0) {
+                cpr::Range range = cpr::Range{0, batch_size - 1};
+                section_sess->SetRange(range);
+            } else if (i == count - 1) {
                 cpr::Range range = cpr::Range{i * batch_size, -1};
                 section_sess->SetRange(range);
             } else {
-                cpr::Range range = cpr::Range{i * batch_size, (i + 1) * batch_size};
+                cpr::Range range = cpr::Range{i * batch_size, (i + 1) * batch_size - 1};
                 section_sess->SetRange(range);
             };
             // section_sess->SetProgressCallback(cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
@@ -286,7 +295,7 @@ bool UgcVideoDownloadTask::download_video(absl::string_view save_directory) {
             section_sess->Download(cpr::WriteCallback{write_data, reinterpret_cast<intptr_t>(output_file)});
             fclose(output_file);
         }
-
+        omp_destroy_lock(&lock);
         download_info_->dowload_finished = true;
     }
 
@@ -305,7 +314,8 @@ bool UgcVideoDownloadTask::end_download() {
             fclose(output);
             return false;
         }
-        for (auto i=0;i<download_info_->index_video_map_.size();i++) {
+        for (auto i = 0; i < download_info_->index_video_map_.size(); i++) {
+            spdlog::info("the count of split videos is {}", download_info_->index_video_map_.size());
             std::string video_path = download_info_->index_video_map_.at(i);
             spdlog::info(video_path);
             FILE* input = fopen(video_path.c_str(), "rb");
@@ -315,18 +325,45 @@ bool UgcVideoDownloadTask::end_download() {
                 fclose(output);
                 return false;
             }
+            // int c;
+            // while ((c = std::fgetc(input)) != EOF) {
+            //     std::fputc(c, output);
+            // }
+            // if (ferror(input)) {
+            //     spdlog::error("I/O error when reading");
+            // } else if (feof(input)) {
+            //     spdlog::info("end reading file {}", video_path.c_str());
+            // }
+
             unsigned char buf[BUFFER_SIZE];
-            while (!feof(input)){
+            while (true) {
+                // https://stackoverflow.com/questions/5431941/why-is-while-feoffile-always-wrong
                 size_t n = fread(buf, sizeof(unsigned char), BUFFER_SIZE, input);
-                if(n!=BUFFER_SIZE){
-                    spdlog::info("video size {}",n);
+                if (feof(input)) {
+                    // spdlog::info("video_size {0}", n);
+                    if (n > 0) {
+                        spdlog::info("video  size {}", n);
+                        fwrite(buf, sizeof(unsigned char), n, output);
+                    }
+                    break;
                 }
                 fwrite(buf, sizeof(unsigned char), n, output);
             };
             fclose(input);
+            // 删除临时文件
+            if (remove(video_path.c_str()) != 0) {
+                spdlog::error("remove temp file error");
+                return false;
+            };
+            spdlog::info("success merge {}", video_path.c_str());
         }
         fclose(output);
     }
+    // 删除临时目录
+    fs::path tmp = download_info_->tmp_dir;
+    if (fs::exists(tmp)) {
+        fs::remove_all(tmp);
+    };
     return true;
 };
 UgcVideoDownloadTask::~UgcVideoDownloadTask(){};

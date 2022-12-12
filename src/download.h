@@ -34,6 +34,7 @@ public:
         std::string durl;
         bool dowload_finished = false;
         bool merge_finished = false;
+        std::string tmp_dir;
         DownloadInfo();
         virtual ~DownloadInfo();
     };
