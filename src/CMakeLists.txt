@@ -10,7 +10,10 @@ FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
 # The commit hash for 1.9.0. Replace with the latest from: https://github.com/libcpr/cpr/releases
 FetchContent_MakeAvailable(cpr)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog absl::strings utf8proc cpr::cpr)
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog absl::strings utf8proc
+                     cpr::cpr
+                     absl::flags
+                     )
 
 find_package(OpenMP REQUIRED)
 
